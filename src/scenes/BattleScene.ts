@@ -8,6 +8,7 @@ import { ViewRect } from "../scripts/camera/ViewRect";
 import { PixiUtils } from "../scripts/Common/PixiUtils";
 import { Point } from "../scripts/Common/Point";
 import { MapData } from "../battle-maps/MapData";
+import { Faction } from "../scripts/battle/EnumTypes";
 
 const { newBitmapFont } = PixiUtils;
 
@@ -117,6 +118,7 @@ export class BattleScene extends Scene {
         );
         
         this.controllers = this.battleSystem.controllers;
+        this.registerDebugHook();
 
         // TODO Move this to a repository of common bounding boxes
         // Add small-map camera squeezing.
@@ -188,6 +190,46 @@ export class BattleScene extends Scene {
 
     destroyStep(): void {
         this.battleSystem.destroy();
+    }
+
+    private registerDebugHook(): void {
+        if (!Game.developmentMode) return;
+        const { map, players } = this.controllers;
+        (window as any).__hollowQueenState = () => {
+            const factionToPlayer = new Map(players.all.map(p => [p.faction, p.playerNumber]));
+            const buildings: { x: number, y: number, type: string, captured_by: number | null }[] = [];
+            for (let y = 0; y < map.height; y++) {
+                for (let x = 0; x < map.width; x++) {
+                    const terrain = map.squareAt({ x, y }).terrain;
+                    if (terrain.building) {
+                        const neutral = terrain.faction === Faction.Neutral || terrain.faction === Faction.None;
+                        buildings.push({
+                            x, y,
+                            type: terrain.name,
+                            captured_by: neutral ? null : (factionToPlayer.get(terrain.faction) ?? null),
+                        });
+                    }
+                }
+            }
+            return {
+                map_name: map.name,
+                player_count: players.all.length,
+                rng_seed: null,
+                active_player: players.current.playerNumber,
+                day: players.day,
+                players: players.all.map(p => ({ playerNumber: p.playerNumber, funds: p.funds })),
+                units: players.all.flatMap(p =>
+                    p.units.map(u => ({
+                        x: u.boardLocation.x,
+                        y: u.boardLocation.y,
+                        type: u.name,
+                        owner: p.playerNumber,
+                        hp: u.hp,
+                    }))
+                ),
+                buildings,
+            };
+        };
     }
 
 }

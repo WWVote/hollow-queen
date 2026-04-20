@@ -1,0 +1,82 @@
+# how-to-play-01.start.yaml
+# Smoketest: "How to Play 01" — state_dump assertion, P0 Day 1 post-StandbyPhase
+# Naming convention: <map-name-lower-kebab>.start.yaml
+#   Reserves .turn<N>.yaml and .end.yaml for AI-session assertions (3b+).
+#
+# LIFECYCLE NOTE — funds at hook capture:
+#   p0_funds=1000: StandbyPhase.collectFunds() (StandbyPhase.ts:22, BoardPlayer.ts:293)
+#   fires at turn-start before action phase. P0 owns 1 HQ (Terrain.ts:982
+#   generatesIncome=true); FUNDS_PER_CITY=1000 (BoardPlayer.ts:39). Initial funds=0
+#   (BattleSceneControllers.ts:124 — startingFunds option commented out).
+#   p1_funds=0: P1 StandbyPhase has not yet run at hook capture time.
+#
+# target.url / enumerate_keywords are informational — harness asserts on an
+# already-loaded game session; no navigation occurs at assertion time.
+
+target:
+  url: "http://localhost:3000"
+  enumerate_keywords: ["How to Play 01"]
+
+assertions:
+  - id: initial_state
+    type: state_dump
+    severity: critical
+    hook: window.__hollowQueenState
+    expect:
+      map_name: "How to Play 01"
+      player_count: 2
+      rng_seed: null
+      active_player: 0
+      day: 1
+      players:
+        - playerNumber: 0
+          funds: 1000
+        - playerNumber: 1
+          funds: 0
+      units:
+        # 12 predeploy units, P0 first (spawn order), then P1.
+        # hp:100 = UnitObjectConstants.MaxHp; no override in predeploy data.
+        - {x:  5, y: 4, type: "Infantry",  owner: 0, hp: 100}
+        - {x:  4, y: 1, type: "Rig",       owner: 0, hp: 100}
+        - {x:  2, y: 3, type: "Mech",      owner: 0, hp: 100}
+        - {x:  1, y: 3, type: "T Copter",  owner: 0, hp: 100}
+        - {x:  5, y: 2, type: "Artillery", owner: 0, hp: 100}
+        - {x:  6, y: 1, type: "Tank",      owner: 0, hp: 100}
+        - {x: 10, y: 0, type: "Mech",      owner: 1, hp: 100}
+        - {x:  9, y: 1, type: "Tank",      owner: 1, hp: 100}
+        - {x: 14, y: 4, type: "Rockets",   owner: 1, hp: 100}
+        - {x: 14, y: 3, type: "Md Tank",   owner: 1, hp: 100}
+        - {x: 13, y: 4, type: "Md Tank",   owner: 1, hp: 100}
+        - {x: 14, y: 5, type: "Md Tank",   owner: 1, hp: 100}
+      buildings:
+        # 4 buildings. Silo at (1,4) excluded: extends TerrainObject not
+        # TerrainBuildingObject → .building=false (Terrain.ts:1123).
+        # Scan order: y outer, x inner.
+        - {x:  6, y: 0, type: "City",    captured_by: 1}
+        - {x: 13, y: 2, type: "HQ",      captured_by: 1}
+        - {x:  2, y: 3, type: "HQ",      captured_by: 0}
+        - {x:  7, y: 4, type: "Factory", captured_by: null}
+
+  - id: map_tiles_visible
+    type: vlm
+    severity: critical
+    model: Qwen3-VL-8B
+    prompt: "Is a grid-based tactical map with terrain tiles visible in the center of the screen?"
+    expect: yes
+
+  - id: hud_panels_present
+    type: vlm
+    severity: critical
+    model: Qwen3-VL-8B
+    prompt: "Are there two player HUD panels visible (showing funds, CO portrait, or player indicators)?"
+    expect: yes
+
+  - id: no_error_overlay
+    type: vlm
+    severity: warning
+    # KI-01: socket.io ERR_CONNECTION_REFUSED floods the console but does not render a
+    # visible overlay. Marked warning (not critical) so KI-01 noise does not cascade.
+    # Revisit if a visual error banner appears; see KNOWN_ISSUES.md KI-01.
+    model: Qwen3-VL-8B
+    prompt: "Is there a browser error overlay, crash banner, or modal error message visible on screen?"
+    expect: no
