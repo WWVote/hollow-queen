@@ -1,0 +1,1 @@
+Post-BP: Selena pushed back through rift, villa gate destroyed behind twins who jumped in pursuit. Game follows twins in Selena's dimension fighting through her three seasonal commanders — Verdant Crown, Gilded Noon, Crimson Leaf — toward confrontation with the Hollow Queen herself. Arknights-dark aesthetic diegetic to the dimension. Tilith does not appear.
